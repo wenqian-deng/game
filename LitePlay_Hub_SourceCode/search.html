@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>搜索游戏 - LitePlay Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            accent: '#F59E0B',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .game-card {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow transition-transform duration-200 ease-in-out;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .game-card:hover {
+      @apply -translate-y-1 shadow-2xl;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <div class="w-4/5 mx-auto px-4 py-8">
+    <!-- 导航栏 -->
+    <header class="flex items-center justify-between py-4 mb-6">
+      <a href="index.html" class="flex items-center gap-2 text-2xl font-bold text-primary hover:underline">
+        <i class="fa-solid fa-gamepad"></i>
+        <span>轻游空间 LitePlay Hub</span>
+      </a>
+      <nav class="flex items-center gap-3">
+        <div class="relative">
+          <input id="search-input" type="text" placeholder="搜索游戏..." class="pl-3 pr-9 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary"><i class="fa fa-search"></i></button>
+        </div>
+        <a href="categories.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-th-large"></i><span class="hidden sm:inline">分类</span></a>
+        <a href="recent.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-history"></i><span class="hidden sm:inline">最近</span></a>
+        <a href="favorites.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-star"></i><span class="hidden sm:inline">收藏</span></a>
+        <button id="theme-toggle" class="ml-2 text-xl px-2 py-1 rounded hover:bg-primary/10 transition-colors"><i class="fa-solid fa-moon"></i></button>
+      </nav>
+    </header>
+    <main>
+      <!-- 搜索信息展示区 -->
+      <section class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">搜索</h2>
+        <div id="search-info" class="text-gray-500 dark:text-gray-300 text-base"></div>
+      </section>
+      <!-- 游戏列表展示区 -->
+      <section>
+        <div id="search-result-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+      </section>
+    </main>
+    <!-- 页脚 -->
+    <footer class="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700 text-center text-sm text-gray-500">
+      <div class="mb-2">
+        <a href="#" class="mx-2 hover:underline">关于我们</a>|
+        <a href="#" class="mx-2 hover:underline">反馈建议</a>|
+        <a href="#" class="mx-2 hover:underline">隐私政策</a>
+      </div>
+      <div>© 2024 轻游空间 LitePlay Hub. All rights reserved.</div>
+    </footer>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    // 获取URL参数
+    function getQueryParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name) || '';
+    }
+    // 游戏卡片生成
+    function createGameCard(game) {
+      const card = document.createElement('div');
+      card.className = 'game-card flex flex-col overflow-hidden';
+      card.innerHTML = `
+        <img src="${game.imageUrl}" alt="${game.name}" class="w-full aspect-video object-cover bg-gray-200 dark:bg-gray-700">
+        <div class="flex-1 flex flex-col p-4 gap-2">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-xs rounded-full font-semibold" style="background-color:var(--tw-${game.categoryColor}-400, #3B82F6);color:#fff;">${game.category}</span>
+            <span class="font-bold text-base">${game.name}</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-300 flex-1">${game.description}</div>
+          <div class="flex items-center justify-between mt-2">
+            <a href="${game.gameUrl}" class="bg-primary text-white px-3 py-1 rounded hover:bg-primary/80 text-sm transition">开始游戏</a>
+            <button class="favorite-btn ${isFavorited(game.id) ? 'text-accent' : 'text-gray-300'} text-xl ml-2" title="${isFavorited(game.id) ? '已收藏' : '收藏'}"><i class="fa fa-star"></i></button>
+          </div>
+        </div>
+      `;
+      // 收藏按钮事件
+      card.querySelector('.favorite-btn').onclick = function() {
+        toggleFavorite(game.id, this);
+      };
+      return card;
+    }
+    // 搜索并渲染
+    function renderSearchResult() {
+      const searchInfo = document.getElementById('search-info');
+      const resultList = document.getElementById('search-result-list');
+      const searchInput = document.getElementById('search-input');
+      let keyword = getQueryParam('query').trim();
+      searchInput.value = keyword;
+      if (!keyword) {
+        searchInfo.textContent = '请输入关键词进行搜索';
+        resultList.innerHTML = '';
+        return;
+      }
+      // 不区分大小写模糊匹配
+      const kw = keyword.toLowerCase();
+      const matched = allGames.filter(g =>
+        g.name.toLowerCase().includes(kw) ||
+        g.description.toLowerCase().includes(kw) ||
+        g.category.toLowerCase().includes(kw)
+      );
+      if (matched.length === 0) {
+        searchInfo.textContent = `未找到关于 " ${keyword} " 的游戏`;
+        resultList.innerHTML = '';
+      } else {
+        searchInfo.textContent = `搜索结果: " ${keyword} ", 共 ${matched.length} 款游戏`;
+        resultList.innerHTML = '';
+        matched.forEach(game => {
+          resultList.appendChild(createGameCard(game));
+        });
+      }
+    }
+    // 收藏相关（与首页一致）
+    function getFavorites() {
+      return JSON.parse(localStorage.getItem('favorites') || '[]');
+    }
+    function setFavorites(favs) {
+      localStorage.setItem('favorites', JSON.stringify(favs));
+    }
+    function isFavorited(gameId) {
+      return getFavorites().includes(gameId);
+    }
+    function toggleFavorite(gameId, btn) {
+      let favs = getFavorites();
+      if (favs.includes(gameId)) {
+        favs = favs.filter(id => id !== gameId);
+        btn.classList.remove('text-accent');
+        btn.classList.add('text-gray-300');
+        btn.title = '收藏';
+      } else {
+        favs.push(gameId);
+        btn.classList.add('text-accent');
+        btn.classList.remove('text-gray-300');
+        btn.title = '已收藏';
+      }
+      setFavorites(favs);
+    }
+    // 初始化
+    function init() {
+      renderSearchResult();
+      // 监听搜索框回车和按钮
+      const searchInput = document.getElementById('search-input');
+      const searchBtn = document.getElementById('search-btn');
+      function doSearch() {
+        const val = searchInput.value.trim();
+        if (val) {
+          window.location.href = `search.html?query=${encodeURIComponent(val)}`;
+        }
+      }
+      if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') doSearch();
+        });
+      }
+      if (searchBtn) {
+        searchBtn.addEventListener('click', doSearch);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html> 

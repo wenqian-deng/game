@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>扫雷</title>
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            background: #202028;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 1.2em;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .game-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            border: 4px solid #444;
+            padding: 20px;
+            border-radius: 10px;
+            background: #282830;
+            height: 95vh;
+            max-height: 95%;
+            box-sizing: border-box;
+            position: relative;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background: #111;
+            display: block;
+        }
+        .ui {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 150px;
+        }
+        .ui h2 {
+            margin: 0;
+            font-size: 1rem;
+            color: #aaa;
+            font-weight: 600;
+        }
+        .ui p {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #f59e0b;
+        }
+        #start-btn {
+            padding: 10px 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background: #3B82F6;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #start-btn:hover {
+            background: #2563EB;
+        }
+        #game-over-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            color: white;
+            z-index: 100;
+        }
+        #game-over-overlay h2 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="minesweeper"></canvas>
+        <div class="ui">
+            <h2>剩余雷数</h2>
+            <p id="mines">0</p>
+            <h2>用时</h2>
+            <p id="timer">00:00</p>
+            <button id="start-btn">开始游戏</button>
+            <div id="game-over-overlay" style="display: none;">
+                <h2 id="game-over-title">游戏结束</h2>
+                <p id="game-over-msg"></p>
+            </div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('minesweeper');
+        const context = canvas.getContext('2d');
+        const minesElement = document.getElementById('mines');
+        const timerElement = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const gameOverTitle = document.getElementById('game-over-title');
+        const gameOverMsg = document.getElementById('game-over-msg');
+
+        // 游戏参数
+        const ROWS = 10;
+        const COLS = 10;
+        const MINES_COUNT = 15;
+        let CELL_SIZE = 36;
+
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let mines = MINES_COUNT;
+        let timer = 0;
+        let timerInterval = null;
+        let running = false;
+        let gameOver = false;
+        let startTime = 0;
+        let firstClick = true;
+
+        function handleResize() {
+            const container = document.querySelector('.game-container');
+            const availableHeight = container.clientHeight - 40;
+            CELL_SIZE = Math.floor(Math.min(availableHeight, 400) / ROWS);
+            canvas.width = COLS * CELL_SIZE;
+            canvas.height = ROWS * CELL_SIZE;
+            draw();
+        }
+
+        function initBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            revealed = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            flagged = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            mines = MINES_COUNT;
+            minesElement.textContent = mines;
+            firstClick = true;
+        }
+
+        function placeMines(excludeRow, excludeCol) {
+            let placed = 0;
+            while (placed < MINES_COUNT) {
+                const row = Math.floor(Math.random() * ROWS);
+                const col = Math.floor(Math.random() * COLS);
+                if ((row !== excludeRow || col !== excludeCol) && board[row][col] !== 'M') {
+                    board[row][col] = 'M';
+                    placed++;
+                }
+            }
+            // 填充数字
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (board[r][c] !== 'M') {
+                        board[r][c] = countMines(r, c);
+                    }
+                }
+            }
+        }
+
+        function countMines(row, col) {
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = row + dr, nc = col + dc;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === 'M') {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                timer = Math.floor((Date.now() - startTime) / 1000);
+                const min = String(Math.floor(timer / 60)).padStart(2, '0');
+                const sec = String(timer % 60).padStart(2, '0');
+                timerElement.textContent = `${min}:${sec}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function revealCell(row, col) {
+            if (revealed[row][col] || flagged[row][col]) return;
+            revealed[row][col] = true;
+            if (board[row][col] === 0) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = row + dr, nc = col + dc;
+                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                            if (!revealed[nr][nc]) {
+                                revealCell(nr, nc);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (board[r][c] !== 'M' && !revealed[r][c]) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function draw() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const x = c * CELL_SIZE;
+                    const y = r * CELL_SIZE;
+                    // 背景
+                    context.fillStyle = revealed[r][c] ? '#bbb' : '#888';
+                    context.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    // 边框
+                    context.strokeStyle = '#fff';
+                    context.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                    // 旗帜
+                    if (flagged[r][c]) {
+                        context.fillStyle = '#e11d48';
+                        context.font = `${CELL_SIZE * 0.7}px Arial`;
+                        context.textAlign = 'center';
+                        context.textBaseline = 'middle';
+                        context.fillText('🚩', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                    } else if (revealed[r][c]) {
+                        if (board[r][c] === 'M') {
+                            context.fillStyle = '#dc2626';
+                            context.font = `${CELL_SIZE * 0.7}px Arial`;
+                            context.fillText('💣', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                        } else if (board[r][c] > 0) {
+                            context.fillStyle = '#2563EB';
+                            context.font = `${CELL_SIZE * 0.6}px Arial`;
+                            context.fillText(board[r][c], x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                        }
+                    }
+                }
+            }
+        }
+
+        function endGame(win) {
+            running = false;
+            gameOver = true;
+            stopTimer();
+            gameOverOverlay.style.display = 'block';
+            gameOverTitle.textContent = win ? '恭喜通关！' : '游戏结束';
+            gameOverMsg.textContent = win ? `用时：${timerElement.textContent}` : '你踩到地雷了！';
+            startBtn.textContent = '重新开始';
+            startBtn.disabled = false;
+        }
+
+        function startGame() {
+            initBoard();
+            running = true;
+            gameOver = false;
+            timer = 0;
+            timerElement.textContent = '00:00';
+            gameOverOverlay.style.display = 'none';
+            startBtn.textContent = '结束游戏';
+            startBtn.disabled = false;
+            draw();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!running || gameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const row = Math.floor(y / CELL_SIZE);
+            const col = Math.floor(x / CELL_SIZE);
+            if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+            if (e.button === 2) { // 右键插旗
+                if (!revealed[row][col]) {
+                    flagged[row][col] = !flagged[row][col];
+                    mines += flagged[row][col] ? -1 : 1;
+                    minesElement.textContent = mines;
+                    draw();
+                }
+            } else if (e.button === 0) { // 左键翻开
+                if (flagged[row][col] || revealed[row][col]) return;
+                if (firstClick) {
+                    placeMines(row, col);
+                    startTimer();
+                    firstClick = false;
+                }
+                if (board[row][col] === 'M') {
+                    revealed[row][col] = true;
+                    draw();
+                    endGame(false);
+                } else {
+                    revealCell(row, col);
+                    draw();
+                    if (checkWin()) {
+                        endGame(true);
+                    }
+                }
+            }
+        });
+        // 禁止右键菜单
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        startBtn.addEventListener('click', () => {
+            if (!running) {
+                startGame();
+            } else {
+                endGame(false);
+            }
+        });
+
+        window.addEventListener('resize', handleResize);
+        document.addEventListener('DOMContentLoaded', () => {
+            handleResize();
+            startGame();
+        });
+    </script>
+</body>
+</html> 

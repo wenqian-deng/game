@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - LitePlay Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            accent: '#F59E0B',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .setting-card {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8;
+    }
+    .setting-title {
+      @apply text-lg font-semibold mb-3;
+    }
+    .setting-btn {
+      @apply px-4 py-2 rounded bg-primary text-white font-medium hover:bg-primary/80 transition mb-2 mr-2;
+    }
+    .setting-btn-danger {
+      @apply bg-red-500 hover:bg-red-600;
+    }
+    .setting-feedback {
+      @apply ml-3 text-green-500 text-sm;
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <div class="w-4/5 mx-auto px-4 py-8">
+    <!-- 导航栏 -->
+    <header class="flex items-center justify-between py-4 mb-6">
+      <a href="index.html" class="flex items-center gap-2 text-2xl font-bold text-primary hover:underline">
+        <i class="fa-solid fa-gamepad"></i>
+        <span>轻游空间 LitePlay Hub</span>
+      </a>
+      <nav class="flex items-center gap-3">
+        <div class="relative">
+          <input id="search-input" type="text" placeholder="搜索游戏..." class="pl-3 pr-9 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary"><i class="fa fa-search"></i></button>
+        </div>
+        <a href="categories.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-th-large"></i><span class="hidden sm:inline">分类</span></a>
+        <a href="recent.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-history"></i><span class="hidden sm:inline">最近</span></a>
+        <a href="favorites.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-star"></i><span class="hidden sm:inline">收藏</span></a>
+        <button id="theme-toggle" class="ml-2 text-xl px-2 py-1 rounded hover:bg-primary/10 transition-colors"><i class="fa-solid fa-moon"></i></button>
+      </nav>
+    </header>
+    <!-- 主标题 -->
+    <h1 class="text-2xl font-bold mb-8">设置</h1>
+    <!-- 外观设置 -->
+    <div class="setting-card">
+      <div class="setting-title">外观</div>
+      <div class="flex items-center gap-4">
+        <span id="theme-status">当前主题：</span>
+        <button id="theme-switch-btn" class="setting-btn"></button>
+      </div>
+    </div>
+    <!-- 数据管理 -->
+    <div class="setting-card">
+      <div class="setting-title">数据管理</div>
+      <div class="mb-3 text-sm text-gray-500 dark:text-gray-300">您的游戏相关数据（如最近玩过、收藏夹、游戏存档等）均存储在本地浏览器中，平台不会收集或上传这些数据。</div>
+      <div class="flex flex-wrap gap-2">
+        <button id="clear-recent-btn" class="setting-btn setting-btn-danger">清空最近玩过记录</button><span id="feedback-recent" class="setting-feedback">已清空</span>
+        <button id="clear-favorites-btn" class="setting-btn setting-btn-danger">清空我的收藏记录</button><span id="feedback-favorites" class="setting-feedback">已清空</span>
+        <button id="clear-saves-btn" class="setting-btn setting-btn-danger">清空所有游戏存档</button><span id="feedback-saves" class="setting-feedback">已清空</span>
+        <button id="clear-all-data-btn" class="setting-btn setting-btn-danger">清空所有本地数据</button><span id="feedback-all" class="setting-feedback">已清空</span>
+      </div>
+    </div>
+    <!-- 关于 -->
+    <div class="setting-card">
+      <div class="setting-title">关于 轻游空间</div>
+      <div class="mb-2 text-base">轻游空间（LitePlay Hub）是一个即点即玩的Web小游戏平台，所有数据均保存在本地，保护您的隐私。</div>
+      <div class="mb-2 text-sm text-gray-500 dark:text-gray-300">当前版本：v1.0.0</div>
+      <div class="mb-2 text-sm"><a href="https://github.com/your-repo/LitePlayHub" target="_blank" class="text-primary hover:underline">GitHub 开源仓库</a></div>
+    </div>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    // 主题切换同步
+    function updateThemeStatus() {
+      const status = document.getElementById('theme-status');
+      const btn = document.getElementById('theme-switch-btn');
+      const isDark = document.documentElement.classList.contains('dark');
+      status.textContent = '当前主题：' + (isDark ? '深色' : '浅色');
+      btn.textContent = isDark ? '切换为浅色' : '切换为深色';
+    }
+    function switchTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateThemeStatus();
+      // 同步导航栏按钮图标
+      const navBtn = document.getElementById('theme-toggle');
+      if (navBtn) navBtn.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    }
+    // 数据清除
+    function showFeedback(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = 'inline';
+      setTimeout(() => { el.style.display = 'none'; }, 1800);
+    }
+    function clearRecent() {
+      if (!confirm('确定要清空最近玩过记录吗？此操作不可恢复。')) return;
+      localStorage.removeItem('recentlyPlayed');
+      // 清除相关游玩次数统计
+      Object.keys(localStorage).forEach(k => { if (k.startsWith('gameStats_')) localStorage.removeItem(k); });
+      showFeedback('feedback-recent');
+    }
+    function clearFavorites() {
+      if (!confirm('确定要清空我的收藏记录吗？此操作不可恢复。')) return;
+      localStorage.removeItem('favorites');
+      showFeedback('feedback-favorites');
+    }
+    function clearSaves() {
+      if (!confirm('确定要清空所有游戏存档吗？此操作不可恢复。')) return;
+      Object.keys(localStorage).forEach(k => { if (k.startsWith('gameState_') || k.startsWith('save_')) localStorage.removeItem(k); });
+      showFeedback('feedback-saves');
+    }
+    function clearAll() {
+      if (!confirm('此操作将清空所有本地数据，包括最近玩过、收藏、存档和主题设置。确定要继续吗？')) return;
+      if (!confirm('再次确认：清空所有本地数据后将无法恢复，确定要继续吗？')) return;
+      // 清除所有相关key
+      ['recentlyPlayed','favorites','theme'].forEach(k=>localStorage.removeItem(k));
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('gameStats_') || k.startsWith('gameState_') || k.startsWith('save_')) localStorage.removeItem(k);
+      });
+      showFeedback('feedback-all');
+    }
+    // 初始化
+    function init() {
+      updateThemeStatus();
+      document.getElementById('theme-switch-btn').onclick = switchTheme;
+      // 监听全局主题切换按钮
+      const navBtn = document.getElementById('theme-toggle');
+      if (navBtn) navBtn.onclick = switchTheme;
+      // 数据管理按钮
+      document.getElementById('clear-recent-btn').onclick = clearRecent;
+      document.getElementById('clear-favorites-btn').onclick = clearFavorites;
+      document.getElementById('clear-saves-btn').onclick = clearSaves;
+      document.getElementById('clear-all-data-btn').onclick = clearAll;
+      // 搜索框交互
+      const searchInput = document.getElementById('search-input');
+      const searchBtn = document.getElementById('search-btn');
+      function doSearch() {
+        const val = searchInput.value.trim();
+        if (val) {
+          window.location.href = `search.html?query=${encodeURIComponent(val)}`;
+        }
+      }
+      if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') doSearch();
+        });
+      }
+      if (searchBtn) {
+        searchBtn.addEventListener('click', doSearch);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html> 

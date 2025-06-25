@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的收藏 - LitePlay Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            accent: '#F59E0B',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .game-card {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow transition-transform duration-200 ease-in-out;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .game-card:hover {
+      @apply -translate-y-1 shadow-2xl;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <div class="w-4/5 mx-auto px-4 py-8">
+    <!-- 导航栏 -->
+    <header class="flex items-center justify-between py-4 mb-6">
+      <a href="index.html" class="flex items-center gap-2 text-2xl font-bold text-primary hover:underline">
+        <i class="fa-solid fa-gamepad"></i>
+        <span>轻游空间 LitePlay Hub</span>
+      </a>
+      <nav class="flex items-center gap-3">
+        <div class="relative">
+          <input id="search-input" type="text" placeholder="搜索游戏..." class="pl-3 pr-9 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary"><i class="fa fa-search"></i></button>
+        </div>
+        <a href="categories.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-th-large"></i><span class="hidden sm:inline">分类</span></a>
+        <a href="recent.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-history"></i><span class="hidden sm:inline">最近</span></a>
+        <a href="favorites.html" class="flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10 text-base"><i class="fa fa-star"></i><span class="hidden sm:inline">收藏</span></a>
+        <button id="theme-toggle" class="ml-2 text-xl px-2 py-1 rounded hover:bg-primary/10 transition-colors"><i class="fa-solid fa-moon"></i></button>
+      </nav>
+    </header>
+    <!-- 主标题 -->
+    <h1 class="text-2xl font-bold mb-6">我的收藏</h1>
+    <!-- 游戏列表展示区 -->
+    <div id="fav-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+    <div id="empty-tip" class="text-gray-400 text-center mt-6 hidden">您还没有收藏任何游戏。</div>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    // 收藏相关
+    function getFavorites() {
+      return JSON.parse(localStorage.getItem('favorites') || '[]');
+    }
+    function setFavorites(favs) {
+      localStorage.setItem('favorites', JSON.stringify(favs));
+    }
+    function isFavorited(gameId) {
+      return getFavorites().includes(gameId);
+    }
+    function removeFavorite(gameId) {
+      let favs = getFavorites();
+      favs = favs.filter(id => id !== gameId);
+      setFavorites(favs);
+    }
+    // 游戏卡片生成
+    function createFavCard(game) {
+      const card = document.createElement('div');
+      card.className = 'game-card flex flex-col overflow-hidden';
+      card.innerHTML = `
+        <img src="${game.imageUrl}" alt="${game.name}" class="w-full aspect-video object-cover bg-gray-200 dark:bg-gray-700">
+        <div class="flex-1 flex flex-col p-4 gap-2">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-xs rounded-full font-semibold" style="background-color:var(--tw-${game.categoryColor}-400, #3B82F6);color:#fff;">${game.category}</span>
+            <span class="font-bold text-base">${game.name}</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-300 flex-1">${game.description}</div>
+          <div class="flex items-center justify-between mt-2">
+            <a href="${game.gameUrl}" class="bg-primary text-white px-3 py-1 rounded hover:bg-primary/80 text-sm transition">开始游戏</a>
+            <button class="favorite-btn text-accent text-xl ml-2" title="已收藏"><i class="fa fa-star"></i></button>
+          </div>
+        </div>
+      `;
+      // 收藏按钮事件
+      card.querySelector('.favorite-btn').onclick = function() {
+        removeFavorite(game.id);
+        renderFavs();
+      };
+      return card;
+    }
+    // 渲染收藏
+    function renderFavs() {
+      const list = document.getElementById('fav-list');
+      const empty = document.getElementById('empty-tip');
+      const favIds = getFavorites();
+      if (!favIds || favIds.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      list.innerHTML = '';
+      favIds.forEach(id => {
+        const game = allGames.find(g => g.id === id);
+        if (!game) return;
+        list.appendChild(createFavCard(game));
+      });
+      empty.classList.add('hidden');
+    }
+    // 初始化
+    function init() {
+      renderFavs();
+      // 搜索框交互
+      const searchInput = document.getElementById('search-input');
+      const searchBtn = document.getElementById('search-btn');
+      function doSearch() {
+        const val = searchInput.value.trim();
+        if (val) {
+          window.location.href = `search.html?query=${encodeURIComponent(val)}`;
+        }
+      }
+      if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') doSearch();
+        });
+      }
+      if (searchBtn) {
+        searchBtn.addEventListener('click', doSearch);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html> 

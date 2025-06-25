@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏 - LitePlay Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            accent: '#F59E0B',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .game-card {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow transition-transform duration-200 ease-in-out;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .game-card:hover {
+      @apply -translate-y-1 shadow-2xl;
+    }
+    #game-container {
+      min-height: 500px;
+      background: #f3f4f6;
+      border-radius: 1rem;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.dark #game-container {
+      background: #23272a;
+    }
+    #game-loading {
+      position: absolute;
+      left: 0; right: 0; top: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      background: rgba(255,255,255,0.7);
+    }
+    body.dark #game-loading {
+      background: rgba(30,32,34,0.7);
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    .game-toolbar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 50;
+      background: rgba(31,41,55,0.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1.5rem;
+      min-height: 56px;
+      color: #fff;
+    }
+    .game-toolbar .btn {
+      @apply flex items-center gap-1 px-3 py-1.5 rounded text-base font-medium transition hover:bg-primary/30 focus:outline-none;
+      background: transparent;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .game-toolbar .btn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .game-toolbar .btn .fa {
+      font-size: 1.2em;
+    }
+    .game-toolbar .btn-exit {
+      @apply ml-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded;
+      font-weight: 600;
+    }
+    .game-toolbar .btn-fav.favorited {
+      color: #F59E0B;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <div class="w-4/5 mx-auto px-4 py-6">
+    <!-- 顶部信息栏 -->
+    <header class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center text-primary hover:underline text-lg font-semibold"><i class="fa fa-arrow-left mr-1"></i> 返回首页</a>
+        <span id="game-title" class="ml-4 text-xl font-bold"></span>
+        <span id="game-category" class="ml-2 px-2 py-0.5 text-xs rounded-full font-semibold"></span>
+      </div>
+      <button id="theme-toggle" class="text-xl px-2 py-1 rounded hover:bg-primary/10 transition-colors"><i class="fa-solid fa-moon"></i></button>
+    </header>
+    <!-- 游戏区域 -->
+    <div id="game-area" class="relative">
+      <div id="game-loading">
+        <i class="fa fa-spinner spin text-3xl mb-2"></i>
+        <div class="text-base">游戏加载中...</div>
+      </div>
+      <div id="game-container" class="w-full" style="height:80vh; margin-top:10px; margin-bottom:20px;"></div>
+    </div>
+  </div>
+  <!-- 游戏控制栏 -->
+  <div class="game-toolbar">
+    <div class="flex items-center gap-2">
+      <button id="fullscreen-btn" class="btn" title="全屏"><i class="fa fa-expand"></i><span class="hidden sm:inline">全屏</span></button>
+      <button id="sound-btn" class="btn" title="声音开关"><i class="fa fa-volume-up"></i><span class="hidden sm:inline">声音</span></button>
+      <button id="restart-btn" class="btn" title="重新开始"><i class="fa fa-rotate-right"></i><span class="hidden sm:inline">重新开始</span></button>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="favorite-btn" class="btn btn-fav" title="收藏"><i class="fa fa-heart"></i><span class="hidden sm:inline">收藏</span></button>
+      <a href="index.html" class="btn btn-exit" title="退出游戏"><i class="fa fa-xmark"></i><span class="hidden sm:inline">退出</span></a>
+    </div>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    // 获取游戏ID
+    function getGameId() {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('game') || '';
+    }
+    // 收藏相关
+    function getFavorites() {
+      return JSON.parse(localStorage.getItem('favorites') || '[]');
+    }
+    function setFavorites(favs) {
+      localStorage.setItem('favorites', JSON.stringify(favs));
+    }
+    function isFavorited(gameId) {
+      return getFavorites().includes(gameId);
+    }
+    function toggleFavorite(gameId, btn) {
+      let favs = getFavorites();
+      if (favs.includes(gameId)) {
+        favs = favs.filter(id => id !== gameId);
+        btn.classList.remove('favorited');
+        btn.title = '收藏';
+      } else {
+        favs.push(gameId);
+        btn.classList.add('favorited');
+        btn.title = '已收藏';
+      }
+      setFavorites(favs);
+    }
+    // 记录最近玩过
+    function recordRecentlyPlayed(game) {
+      let list = [];
+      try {
+        list = JSON.parse(localStorage.getItem('recentlyPlayed') || '[]');
+      } catch {}
+      // 更新游玩次数
+      const statKey = 'gameStats_' + game.id;
+      let stat = { playCount: 0 };
+      try { stat = JSON.parse(localStorage.getItem(statKey) || '{"playCount":0}'); } catch {}
+      stat.playCount++;
+      localStorage.setItem(statKey, JSON.stringify(stat));
+      // 移除同id
+      list = list.filter(item => item.id !== game.id);
+      // 新记录插入最前，count字段等于真实游玩次数
+      list.unshift({ id: game.id, title: game.name, timestamp: Date.now(), count: stat.playCount });
+      // 限制10条
+      if (list.length > 10) list = list.slice(0, 10);
+      localStorage.setItem('recentlyPlayed', JSON.stringify(list));
+    }
+    // 页面初始化
+    function init() {
+      const gameId = getGameId();
+      if (!gameId) {
+        alert('未指定游戏ID，正在返回首页...');
+        window.location.href = 'index.html';
+        return;
+      }
+      // 查找游戏
+      const game = allGames.find(g => g.id === gameId);
+      if (!game) {
+        alert('未找到该游戏，正在返回首页...');
+        window.location.href = 'index.html';
+        return;
+      }
+      // 顶部信息栏填充
+      document.getElementById('game-title').textContent = game.name;
+      const catTag = document.getElementById('game-category');
+      catTag.textContent = game.category;
+      catTag.style.backgroundColor = `var(--tw-${game.categoryColor}-400, #3B82F6)`;
+      catTag.style.color = '#fff';
+      // 收藏按钮初始化
+      const favBtn = document.getElementById('favorite-btn');
+      if (isFavorited(game.id)) {
+        favBtn.classList.add('favorited');
+        favBtn.title = '已收藏';
+      } else {
+        favBtn.classList.remove('favorited');
+        favBtn.title = '收藏';
+      }
+      favBtn.onclick = function() {
+        toggleFavorite(game.id, favBtn);
+      };
+      // 加载游戏iframe
+      const loading = document.getElementById('game-loading');
+      const container = document.getElementById('game-container');
+      container.innerHTML = '';
+      loading.style.display = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = `assets/games/${game.id}/index.html`;
+      iframe.className = 'w-full h-full min-h-[500px] border-0';
+      iframe.style.background = 'transparent';
+      iframe.allow = 'autoplay; fullscreen;';
+      iframe.onload = function() {
+        loading.style.display = 'none';
+        recordRecentlyPlayed(game);
+      };
+      container.appendChild(iframe);
+      // 全屏功能
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+      let isFullscreen = false;
+      function updateFullscreenBtn() {
+        fullscreenBtn.innerHTML = isFullscreen ? '<i class="fa fa-compress"></i><span class="hidden sm:inline">退出全屏</span>' : '<i class="fa fa-expand"></i><span class="hidden sm:inline">全屏</span>';
+      }
+      fullscreenBtn.onclick = function() {
+        const elem = container;
+        if (!isFullscreen) {
+          if (elem.requestFullscreen) elem.requestFullscreen();
+          else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+          else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          else if (document.msExitFullscreen) document.msExitFullscreen();
+        }
+      };
+      document.addEventListener('fullscreenchange', () => {
+        isFullscreen = !!document.fullscreenElement;
+        updateFullscreenBtn();
+      });
+      // 声音控制
+      const soundBtn = document.getElementById('sound-btn');
+      let soundOn = true;
+      function updateSoundBtn() {
+        soundBtn.innerHTML = soundOn ? '<i class="fa fa-volume-up"></i><span class="hidden sm:inline">声音</span>' : '<i class="fa fa-volume-mute"></i><span class="hidden sm:inline">静音</span>';
+      }
+      soundBtn.onclick = function() {
+        soundOn = !soundOn;
+        updateSoundBtn();
+        // 可选：向iframe发送postMessage控制声音
+        // iframe.contentWindow.postMessage({type:'toggleSound', value:soundOn}, '*');
+      };
+      updateSoundBtn();
+      // 重新开始
+      const restartBtn = document.getElementById('restart-btn');
+      restartBtn.onclick = function() {
+        iframe.src = iframe.src;
+        // 可选：iframe.contentWindow.postMessage({type:'restart'}, '*');
+      };
+    }
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html> 
